@@ -45,7 +45,7 @@ app.get('/', (req, res) => {
         <h1>Discord Bot Status</h1>
         <p class="status">Bot ist aktuell: ${botStatus.toUpperCase()}</p>
         <form method="POST" action="/toggle">
-            <button type="submit">${manualOverride ? 'Automatisch steuern' : 'Manuell offline schalten'}</button>
+            <button type="submit">${manualOverride ? 'Automatisch steuern' : 'Manuell down schalten'}</button>
         </form>
     </body>
     </html>
