@@ -4,63 +4,98 @@ const express = require('express');
 const path = require('path');
 
 const client = new Client({
-  intents: [
-    GatewayIntentBits.Guilds
-  ],
+  intents: [GatewayIntentBits.Guilds],
 });
 
 const app = express();
 const port = 3000;
+
+let botStatus = 'online'; // Standardstatus
+let manualOverride = false; // Steuerung, ob der Bot-Status manuell geändert wurde
+
+// Route für die Website
 app.get('/', (req, res) => {
-  const imagePath = path.join(__dirname, 'index.html');
-  res.sendFile(imagePath);
-});
-app.listen(port, () => {
-  console.log('\x1b[36m[ SERVER ]\x1b[0m', '\x1b[32m SH : http://localhost:' + port + ' ✅\x1b[0m');
+  const page = `
+    <!DOCTYPE html>
+    <html lang="en">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Bot Status</title>
+        <style>
+          body {
+            font-family: Arial, sans-serif;
+            text-align: center;
+            padding: 20px;
+          }
+          .status {
+            font-size: 1.5em;
+            color: ${botStatus === 'online' ? 'green' : 'red'};
+          }
+          button {
+            padding: 10px 20px;
+            font-size: 1em;
+            cursor: pointer;
+            margin-top: 20px;
+          }
+        </style>
+        <link rel="icon" href="${botStatus === 'online' ? '/online-icon' : '/offline-icon'}">
+    </head>
+    <body>
+        <h1>Discord Bot Status</h1>
+        <p class="status">Bot ist aktuell: ${botStatus.toUpperCase()}</p>
+        <form method="POST" action="/toggle">
+            <button type="submit">${manualOverride ? 'Automatisch steuern' : 'Manuell offline schalten'}</button>
+        </form>
+    </body>
+    </html>
+  `;
+  res.send(page);
 });
 
-const statusMessages = ["🎮Spielt Ali's Dönergame",
-  "🥙Macht Döner mit Alles",
-  "❌Schmeißt Kunden raus"];
-const statusTypes = [ 'dnd', 'dnd', 'dnd'];
-let currentStatusIndex = 0;
-let currentTypeIndex = 0;
+// Route für das Umschalten des Bot-Status
+app.post('/toggle', (req, res) => {
+  manualOverride = !manualOverride;
+  if (manualOverride) {
+    botStatus = 'offline';
+    client.destroy(); // Bot herunterfahren
+  } else {
+    botStatus = 'online';
+    loginBot(); // Bot wieder starten
+  }
+  res.redirect('/');
+});
 
-async function login() {
+// Route für Icons
+app.get('/online-icon', (req, res) => {
+  res.sendFile(path.join(__dirname, 'online.png')); // Hier kannst du ein Online-Icon hinzufügen
+});
+app.get('/offline-icon', (req, res) => {
+  res.sendFile(path.join(__dirname, 'offline.png')); // Hier kannst du ein Offline-Icon hinzufügen
+});
+
+// Funktion, um den Bot zu starten
+async function loginBot() {
   try {
     await client.login(process.env.TOKEN);
-    console.log('\x1b[36m[ LOGIN ]\x1b[0m', `\x1b[32mLogged in as: ${client.user.tag} ✅\x1b[0m`);
-    console.log('\x1b[36m[ INFO ]\x1b[0m', `\x1b[35mBot ID: ${client.user.id} \x1b[0m`);
-    console.log('\x1b[36m[ INFO ]\x1b[0m', `\x1b[34mConnected to ${client.guilds.cache.size} server(s) \x1b[0m`);
+    console.log('Bot erfolgreich eingeloggt.');
   } catch (error) {
-    console.error('\x1b[31m[ ERROR ]\x1b[0m', 'Failed to log in:', error);
-    process.exit(1);
+    console.error('Fehler beim Einloggen:', error.message);
   }
 }
 
-function updateStatus() {
-  const currentStatus = statusMessages[currentStatusIndex];
-  const currentType = statusTypes[currentTypeIndex];
-  client.user.setPresence({
-    activities: [{ name: currentStatus, type: ActivityType.Custom }],
-    status: currentType,
-  });
-  console.log('\x1b[33m[ STATUS ]\x1b[0m', `Updated status to: ${currentStatus} (${currentType})`);
-  currentStatusIndex = (currentStatusIndex + 1) % statusMessages.length;
-  currentTypeIndex = (currentTypeIndex + 1) % statusTypes.length;
-}
-
-function heartbeat() {
-  setInterval(() => {
-    console.log('\x1b[35m[ HEARTBEAT ]\x1b[0m', `Bot is alive at ${new Date().toLocaleTimeString()}`);
-  }, 30000);
-}
-
+// Bot-Event: Wenn der Bot bereit ist
 client.once('ready', () => {
-  console.log('\x1b[36m[ INFO ]\x1b[0m', `\x1b[34mPing: ${client.ws.ping} ms \x1b[0m`);
-  updateStatus();
-  setInterval(updateStatus, 30000);
-  heartbeat();
+  console.log('Bot ist online.');
+  setInterval(() => {
+    console.log('Bot-Heartbeat: Der Bot läuft noch.');
+  }, 30000);
 });
 
-login();
+// Express-Server starten
+app.listen(port, () => {
+  console.log(`Server läuft auf http://localhost:${port}`);
+});
+
+// Bot initial starten
+loginBot();
