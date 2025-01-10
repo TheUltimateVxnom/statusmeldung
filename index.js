@@ -13,6 +13,10 @@ const port = 3000;
 let botStatus = 'online'; // Standardstatus
 let manualOverride = false; // Steuerung, ob der Bot-Status manuell geändert wurde
 
+// Status-Nachrichten für den Bot
+const statusMessages = ['🥙Macht Döner', '🎮Spielt Kebabgame'];
+let currentStatusIndex = 0; // Initialer Index für die Statusnachricht
+
 // Route für die Website
 app.get('/', (req, res) => {
   const page = `
@@ -87,9 +91,19 @@ async function loginBot() {
 // Bot-Event: Wenn der Bot bereit ist
 client.once('ready', () => {
   console.log('Bot ist online.');
+
+  // Status alle 30 Sekunden ändern
   setInterval(() => {
-    console.log('Bot-Heartbeat: Der Bot läuft noch.');
-  }, 30000);
+    const currentStatus = statusMessages[currentStatusIndex];
+    client.user.setPresence({
+      activities: [{ name: currentStatus, type: ActivityType.Playing }],
+      status: 'online',
+    });
+    console.log(`Status auf "${currentStatus}" geändert.`);
+    
+    // Den Index für die nächste Statusnachricht ändern
+    currentStatusIndex = (currentStatusIndex + 1) % statusMessages.length;
+  }, 30000); // alle 30 Sekunden
 });
 
 // Express-Server starten
