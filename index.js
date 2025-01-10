@@ -15,7 +15,8 @@ let manualOverride = false; // Steuerung, ob der Bot-Status manuell geändert wu
 
 // Status-Nachrichten für den Bot
 const statusMessages = ['🥙Macht Döner', '🎮Spielt Kebabgame'];
-let currentStatusIndex = 0; // Initialer Index für die Statusnachricht
+let currentStatusIndex = 0;
+let currentTypeIndex = 0;// Initialer Index für die Statusnachricht
 
 // Route für die Website
 app.get('/', (req, res) => {
