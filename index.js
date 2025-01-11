@@ -10,15 +10,18 @@ const client = new Client({
 const app = express();
 const port = 3000;
 
+// Bot-Status
 let botStatus = 'online'; // Standardstatus
 let manualOverride = false; // Steuerung, ob der Bot-Status manuell geändert wurde
 
-// Status-Nachrichten für den Bot
-const statusMessages = ['🥙Macht Döner', '🎮Spielt Kebabgame'];
-let currentStatusIndex = 0; // Initialer Index für die Statusnachricht
+// Statusmeldungen und Typen
+const statusMessages = ["🥙Macht Döner", "🎮Spielt Kebabgame"];
+let currentStatusIndex = 0;
 
 // Route für die Website
 app.get('/', (req, res) => {
+  const statusColor = botStatus === 'online' ? 'green' : 'red';
+  const buttonText = manualOverride ? 'Automatisch steuern' : 'Manuell down  schalten';
   const page = `
     <!DOCTYPE html>
     <html lang="en">
@@ -34,7 +37,7 @@ app.get('/', (req, res) => {
           }
           .status {
             font-size: 1.5em;
-            color: ${botStatus === 'online' ? 'green' : 'red'};
+            color: ${statusColor};
           }
           button {
             padding: 10px 20px;
@@ -42,14 +45,18 @@ app.get('/', (req, res) => {
             cursor: pointer;
             margin-top: 20px;
           }
+          img {
+            width: 100px;
+            height: 100px;
+          }
         </style>
-        <link rel="icon" href="${botStatus === 'online' ? '/online-icon' : '/offline-icon'}">
     </head>
     <body>
         <h1>Discord Bot Status</h1>
+        <img src="${botStatus === 'online' ? '/online-icon' : '/offline-icon'}" alt="Bot Status">
         <p class="status">Bot ist aktuell: ${botStatus.toUpperCase()}</p>
         <form method="POST" action="/toggle">
-            <button type="submit">${manualOverride ? 'Automatisch steuern' : 'Manuell down schalten'}</button>
+            <button type="submit">${buttonText}</button>
         </form>
     </body>
     </html>
@@ -72,10 +79,10 @@ app.post('/toggle', (req, res) => {
 
 // Route für Icons
 app.get('/online-icon', (req, res) => {
-  res.sendFile(path.join(__dirname, 'online.png')); // Hier kannst du ein Online-Icon hinzufügen
+  res.sendFile(path.join(__dirname, 'online.png')); // Online-Icon
 });
 app.get('/offline-icon', (req, res) => {
-  res.sendFile(path.join(__dirname, 'offline.png')); // Hier kannst du ein Offline-Icon hinzufügen
+  res.sendFile(path.join(__dirname, 'offline.png')); // Offline-Icon
 });
 
 // Funktion, um den Bot zu starten
@@ -83,27 +90,31 @@ async function loginBot() {
   try {
     await client.login(process.env.TOKEN);
     console.log('Bot erfolgreich eingeloggt.');
+    botStatus = 'online';
   } catch (error) {
     console.error('Fehler beim Einloggen:', error.message);
+    botStatus = 'offline';
   }
+}
+
+// Funktion, um den Status des Bots zu aktualisieren
+function updateStatus() {
+  if (botStatus === 'offline' || manualOverride) return;
+
+  const currentStatus = statusMessages[currentStatusIndex];
+  client.user.setPresence({
+    activities: [{ name: currentStatus, type: ActivityType.Custom }],
+    status: 'online',
+  });
+  console.log(`Status auf "${currentStatus}" geändert.`);
+  currentStatusIndex = (currentStatusIndex + 1) % statusMessages.length;
 }
 
 // Bot-Event: Wenn der Bot bereit ist
 client.once('ready', () => {
   console.log('Bot ist online.');
-
-  // Status alle 30 Sekunden ändern
-  setInterval(() => {
-    const currentStatus = statusMessages[currentStatusIndex];
-    client.user.setPresence({
-      activities: [{ name: currentStatus, type: ActivityType.Playing }],
-      status: 'online',
-    });
-    console.log(`Status auf "${currentStatus}" geändert.`);
-    
-    // Den Index für die nächste Statusnachricht ändern
-    currentStatusIndex = (currentStatusIndex + 1) % statusMessages.length;
-  }, 30000); // alle 30 Sekunden
+  updateStatus();
+  setInterval(updateStatus, 30000); // Status alle 30 Sekunden aktualisieren
 });
 
 // Express-Server starten
