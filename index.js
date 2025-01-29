@@ -15,7 +15,7 @@ let botStatus = 'online'; // Standardstatus
 let manualOverride = false; // Steuerung, ob der Bot-Status manuell geändert wurde
 
 // Statusmeldungen und Typen
-const statusMessages = ["🥙Macht Döner", "🎮Spielt Kebabgame"];
+const statusMessages = ["\ud83e\udd59Macht Döner", "\ud83c\udfaeSpielt Kebabgame"];
 let currentStatusIndex = 0;
 
 // Route für die Website
@@ -110,11 +110,25 @@ function updateStatus() {
   currentStatusIndex = (currentStatusIndex + 1) % statusMessages.length;
 }
 
+// Funktion, um alle 2 Stunden den /heartbeat Befehl auszuführen
+async function sendHeartbeat() {
+  if (botStatus === 'online' && client.isReady()) {
+    const channel = client.channels.cache.get(process.env.HEARTBEAT_CHANNEL_ID);
+    if (channel) {
+      await channel.send('/heartbeat');
+      console.log('Heartbeat-Befehl gesendet.');
+    } else {
+      console.error('Heartbeat-Channel nicht gefunden.');
+    }
+  }
+}
+
 // Bot-Event: Wenn der Bot bereit ist
 client.once('ready', () => {
   console.log('Bot ist online.');
   updateStatus();
   setInterval(updateStatus, 30000); // Status alle 30 Sekunden aktualisieren
+  setInterval(sendHeartbeat, 2 * 60 * 60 * 1000); // Alle 2 Stunden Heartbeat senden
 });
 
 // Express-Server starten
