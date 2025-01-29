@@ -110,7 +110,7 @@ function updateStatus() {
   currentStatusIndex = (currentStatusIndex + 1) % statusMessages.length;
 }
 
-// Funktion, um alle 2 Stunden den /heartbeat Befehl korrekt auszuführen
+// Funktion, um den /heartbeat Befehl korrekt auszuführen
 async function sendHeartbeat() {
   if (botStatus === 'online' && client.application) {
     try {
@@ -138,9 +138,10 @@ async function sendHeartbeat() {
 }
 
 // Bot-Event: Wenn der Bot bereit ist
-client.once('ready', () => {
+client.once('ready', async () => {
   console.log('Bot ist online.');
   updateStatus();
+  await sendHeartbeat(); // Direkt beim Start einmal ausführen
   setInterval(updateStatus, 30000); // Status alle 30 Sekunden aktualisieren
   setInterval(sendHeartbeat, 2 * 60 * 60 * 1000); // Alle 2 Stunden Heartbeat senden
 });
