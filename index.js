@@ -2,6 +2,7 @@ const { Client, GatewayIntentBits, ActivityType } = require('discord.js');
 require('dotenv').config();
 const express = require('express');
 const path = require('path');
+const axios = require('axios'); // Neu hinzugefügt für Webhook-Anfragen
 
 const client = new Client({
   intents: [GatewayIntentBits.Guilds],
@@ -15,13 +16,17 @@ let botStatus = 'online'; // Standardstatus
 let manualOverride = false; // Steuerung, ob der Bot-Status manuell geändert wurde
 
 // Statusmeldungen und Typen
-const statusMessages = ["\ud83e\udd59Macht Döner", "\ud83c\udfaeSpielt Kebabgame"];
+const statusMessages = ["🥙 Macht Döner", "🎮 Spielt Kebabgame"];
 let currentStatusIndex = 0;
+
+// BotGhost Webhook Daten
+const BOTGHOST_WEBHOOK_URL = "https://api.botghost.com/webhook/1325169255322226760/9xtuivjyecnj6gnuok7ej";
+const BOTGHOST_API_KEY = "DEIN_API_KEY_HIER"; // <- Hier deinen API-Key einfügen
 
 // Route für die Website
 app.get('/', (req, res) => {
   const statusColor = botStatus === 'online' ? 'green' : 'red';
-  const buttonText = manualOverride ? 'Automatisch steuern' : 'Manuell down  schalten';
+  const buttonText = manualOverride ? 'Automatisch steuern' : 'Manuell down schalten';
   const page = `
     <!DOCTYPE html>
     <html lang="en">
@@ -89,10 +94,10 @@ app.get('/offline-icon', (req, res) => {
 async function loginBot() {
   try {
     await client.login(process.env.TOKEN);
-    console.log('Bot erfolgreich eingeloggt.');
+    console.log('✅ Bot erfolgreich eingeloggt.');
     botStatus = 'online';
   } catch (error) {
-    console.error('Fehler beim Einloggen:', error.message);
+    console.error('❌ Fehler beim Einloggen:', error.message);
     botStatus = 'offline';
   }
 }
@@ -106,40 +111,39 @@ function updateStatus() {
     activities: [{ name: currentStatus, type: ActivityType.Custom }],
     status: 'online',
   });
-  console.log(`Status auf "${currentStatus}" geändert.`);
+  console.log(`🟢 Status auf "${currentStatus}" geändert.`);
   currentStatusIndex = (currentStatusIndex + 1) % statusMessages.length;
 }
 
-// Funktion, um den /heartbeat Befehl korrekt auszuführen
+// **Funktion, um den /heartbeat-Befehl über Webhook auszuführen**
 async function sendHeartbeat() {
-  if (botStatus === 'online' && client.application) {
-    try {
-      await client.application.commands.fetch();
-      const command = client.application.commands.cache.find(cmd => cmd.name === 'heartbeat');
-      if (command) {
-        const guild = client.guilds.cache.first();
-        if (guild) {
-          const interaction = {
-            guild,
-            command,
-            user: client.user,
-            member: guild.members.me,
-            client,
-            reply: async (msg) => console.log('Heartbeat ausgeführt:', msg),
-          };
-          await command.execute(interaction);
-          console.log('Heartbeat-Befehl erfolgreich ausgeführt.');
+  if (botStatus === 'offline') return; // Falls der Bot offline ist, abbrechen
+
+  try {
+    const response = await axios.post(BOTGHOST_WEBHOOK_URL, {
+      variables: [
+        {
+          name: "message",
+          variable: "{event_message}",
+          value: "/heartbeat" // Hier wird der Command ausgeführt
         }
+      ]
+    }, {
+      headers: {
+        "Authorization": BOTGHOST_API_KEY, // API-Key für Authentifizierung
+        "Content-Type": "application/json"
       }
-    } catch (error) {
-      console.error('Fehler beim Ausführen von /heartbeat:', error);
-    }
+    });
+
+    console.log("✅ /heartbeat erfolgreich gesendet!", response.data);
+  } catch (error) {
+    console.error("❌ Fehler beim Webhook:", error.response ? error.response.data : error.message);
   }
 }
 
 // Bot-Event: Wenn der Bot bereit ist
 client.once('ready', async () => {
-  console.log('Bot ist online.');
+  console.log('🟢 Bot ist online.');
   updateStatus();
   await sendHeartbeat(); // Direkt beim Start einmal ausführen
   setInterval(updateStatus, 30000); // Status alle 30 Sekunden aktualisieren
@@ -148,7 +152,7 @@ client.once('ready', async () => {
 
 // Express-Server starten
 app.listen(port, () => {
-  console.log(`Server läuft auf http://localhost:${port}`);
+  console.log(`🌍 Server läuft auf http://localhost:${port}`);
 });
 
 // Bot initial starten
