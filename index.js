@@ -110,15 +110,29 @@ function updateStatus() {
   currentStatusIndex = (currentStatusIndex + 1) % statusMessages.length;
 }
 
-// Funktion, um alle 2 Stunden den /heartbeat Befehl auszuführen
+// Funktion, um alle 2 Stunden den /heartbeat Befehl korrekt auszuführen
 async function sendHeartbeat() {
-  if (botStatus === 'online' && client.isReady()) {
-    const channel = client.channels.cache.get(process.env.HEARTBEAT_CHANNEL_ID);
-    if (channel) {
-      await channel.send('/heartbeat');
-      console.log('Heartbeat-Befehl gesendet.');
-    } else {
-      console.error('Heartbeat-Channel nicht gefunden.');
+  if (botStatus === 'online' && client.application) {
+    try {
+      await client.application.commands.fetch();
+      const command = client.application.commands.cache.find(cmd => cmd.name === 'heartbeat');
+      if (command) {
+        const guild = client.guilds.cache.first();
+        if (guild) {
+          const interaction = {
+            guild,
+            command,
+            user: client.user,
+            member: guild.members.me,
+            client,
+            reply: async (msg) => console.log('Heartbeat ausgeführt:', msg),
+          };
+          await command.execute(interaction);
+          console.log('Heartbeat-Befehl erfolgreich ausgeführt.');
+        }
+      }
+    } catch (error) {
+      console.error('Fehler beim Ausführen von /heartbeat:', error);
     }
   }
 }
