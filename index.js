@@ -21,7 +21,7 @@ let currentStatusIndex = 0;
 
 // BotGhost Webhook Daten
 const BOTGHOST_WEBHOOK_URL = "https://api.botghost.com/webhook/1325169255322226760/9xtuivjyecnj6gnuok7ej";
-const BOTGHOST_API_KEY = "DEIN_API_KEY_HIER"; // <- Hier deinen API-Key einfügen
+const BOTGHOST_API_KEY = "049f450a741d340471e22649dc8b0527a1e66ad4b6973cb90662d72dacd57256"; // <- Hier deinen API-Key einfügen
 
 // Route für die Website
 app.get('/', (req, res) => {
